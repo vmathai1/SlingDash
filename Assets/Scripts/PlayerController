@@ -1,0 +1,163 @@
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    [Header("Movement")]
+    public float jumpForce = 12f;
+    public LayerMask groundLayer;
+    public Transform groundCheck;
+    public float groundCheckRadius = 0.2f;
+    public float hitDistance = 1.5f;
+
+    [Header("Duck Settings")]
+    public float duckScaleY = 0.65f;
+
+    [Header("Jump Limits")]
+    public float maxJumpHeight = 3f;
+
+    private Rigidbody2D rb;
+    private Animator animator;
+    private bool isGrounded;
+    private bool isDucking;
+    private bool hasJumped;
+    private int hitCount;
+    private float scoreTimer;
+    private float scoreInterval = 1.5f;
+    private Vector3 originalScale;
+    private float duckTimer;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
+        originalScale = transform.localScale;
+    }
+
+    void Update()
+    {
+        if (GameManager.Instance.IsGameOver()) return;
+
+        isGrounded = Physics2D.Raycast(
+            transform.position, Vector2.down, 1.5f);
+
+        // Reset jump when grounded
+        if (isGrounded)
+            hasJumped = false;
+
+        // Stop upward movement if above max height
+        if (transform.position.y >= maxJumpHeight && rb.velocity.y > 0)
+            rb.velocity = new Vector2(rb.velocity.x, 0f);
+
+        // Score over time
+        scoreTimer += Time.deltaTime;
+        if (scoreTimer >= scoreInterval)
+        {
+            GameManager.Instance.AddScore();
+            scoreTimer = 0f;
+        }
+
+        // Auto stop ducking after 1 second
+        if (isDucking)
+        {
+            duckTimer += Time.deltaTime;
+            if (duckTimer >= 1f)
+            {
+                StopDucking();
+                duckTimer = 0f;
+            }
+        }
+
+        // Check poop collision
+        CheckPoopCollision();
+
+        // Keyboard jump
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isDucking)
+            Jump();
+
+        // Keyboard duck
+        if (Input.GetKeyDown(KeyCode.DownArrow) && isGrounded)
+            Duck();
+        if (Input.GetKeyUp(KeyCode.DownArrow))
+            StopDucking();
+
+        // Mobile touch
+        if (Input.touchCount > 0)
+        {
+            Touch touch = Input.GetTouch(0);
+            if (touch.phase == TouchPhase.Began && isGrounded && !isDucking)
+                Jump();
+        }
+    }
+
+    public void Jump()
+    {
+        if (!isGrounded || isDucking) return;
+        if (transform.position.y >= maxJumpHeight) return;
+        if (hasJumped) return;
+
+        hasJumped = true;
+        rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+    }
+
+    public void Duck()
+    {
+        if (!isGrounded) return;
+        isDucking = true;
+        duckTimer = 0f;
+        transform.localScale = new Vector3(
+            originalScale.x * 1.2f,
+            originalScale.y * duckScaleY,
+            originalScale.z);
+    }
+
+    public void StopDucking()
+    {
+        isDucking = false;
+        duckTimer = 0f;
+        transform.localScale = originalScale;
+    }
+
+    void CheckPoopCollision()
+    {
+        GameObject[] groundPoops = 
+            GameObject.FindGameObjectsWithTag("GroundPoop");
+        GameObject[] hangingPoops = 
+            GameObject.FindGameObjectsWithTag("HangingPoop");
+
+        foreach (GameObject poop in groundPoops)
+        {
+            float distance = Vector2.Distance(
+                transform.position, poop.transform.position);
+            if (distance < hitDistance)
+            {
+                HandleHit();
+                Destroy(poop);
+                return;
+            }
+        }
+
+        foreach (GameObject poop in hangingPoops)
+        {
+            float distance = Vector2.Distance(
+                transform.position, poop.transform.position);
+            if (distance < hitDistance && !isDucking)
+            {
+                HandleHit();
+                Destroy(poop);
+                return;
+            }
+        }
+    }
+
+    void HandleHit()
+    {
+        hitCount++;
+        GameManager.Instance.PlayerHit();
+
+        if (animator != null)
+            animator.SetInteger("HitCount", hitCount);
+
+        Debug.Log("Hit count: " + hitCount);
+    }
+}
+
