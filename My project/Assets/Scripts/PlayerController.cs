@@ -2,29 +2,27 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("Movement")]
     public float jumpForce = 12f;
     public LayerMask groundLayer;
     public Transform groundCheck;
     public float groundCheckRadius = 0.2f;
     public float hitDistance = 1.5f;
-
-    [Header("Duck Settings")]
-    public float duckScaleY = 0.65f;
-
-    [Header("Jump Limits")]
+    public int maxJumps = 3;
     public float maxJumpHeight = 3f;
+    public float duckScaleY = 0.65f;
+    public float jumpCooldown = 0.3f;
 
     private Rigidbody2D rb;
     private Animator animator;
     private bool isGrounded;
     private bool isDucking;
-    private bool hasJumped;
+    private int jumpCount = 0;
     private int hitCount;
     private float scoreTimer;
     private float scoreInterval = 1.5f;
     private Vector3 originalScale;
     private float duckTimer;
+    private float lastJumpTime = -1f;
 
     void Start()
     {
@@ -37,14 +35,19 @@ public class PlayerController : MonoBehaviour
     {
         if (GameManager.Instance.IsGameOver()) return;
 
+        // Only detect actual ground layer
         isGrounded = Physics2D.Raycast(
-            transform.position, Vector2.down, 1.5f);
+            transform.position, Vector2.down, 1.2f, groundLayer);
 
-        // Reset jump when grounded
-        if (isGrounded)
-            hasJumped = false;
+        // Only reset when truly landed
+        if (isGrounded && rb.linearVelocity.y <= 0.05f)
+        {
+            if (jumpCount > 0)
+                Debug.Log("Landing! Resetting jumps");
+            jumpCount = 0;
+        }
 
-        // Stop upward movement if above max height
+        // Stop at max height
         if (transform.position.y >= maxJumpHeight && rb.linearVelocity.y > 0)
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
 
@@ -56,7 +59,7 @@ public class PlayerController : MonoBehaviour
             scoreTimer = 0f;
         }
 
-        // Auto stop ducking after 1 second
+        // Auto stop ducking
         if (isDucking)
         {
             duckTimer += Time.deltaTime;
@@ -67,11 +70,10 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // Check poop collision
         CheckPoopCollision();
 
         // Keyboard jump
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isDucking)
+        if (Input.GetKeyDown(KeyCode.Space) && !isDucking)
             Jump();
 
         // Keyboard duck
@@ -79,24 +81,21 @@ public class PlayerController : MonoBehaviour
             Duck();
         if (Input.GetKeyUp(KeyCode.DownArrow))
             StopDucking();
-
-        // Mobile touch
-        if (Input.touchCount > 0)
-        {
-            Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began && isGrounded && !isDucking)
-                Jump();
-        }
     }
 
     public void Jump()
     {
-        if (!isGrounded || isDucking) return;
+        // Check cooldown
+        if (Time.time - lastJumpTime < jumpCooldown) return;
+        // Check max jumps
+        if (jumpCount >= maxJumps) return;
+        if (isDucking) return;
         if (transform.position.y >= maxJumpHeight) return;
-        if (hasJumped) return;
 
-        hasJumped = true;
+        jumpCount++;
+        lastJumpTime = Time.time;
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+        Debug.Log("Jump " + jumpCount + " of " + maxJumps);
     }
 
     public void Duck()
@@ -119,9 +118,9 @@ public class PlayerController : MonoBehaviour
 
     void CheckPoopCollision()
     {
-        GameObject[] groundPoops = 
+        GameObject[] groundPoops =
             GameObject.FindGameObjectsWithTag("GroundPoop");
-        GameObject[] hangingPoops = 
+        GameObject[] hangingPoops =
             GameObject.FindGameObjectsWithTag("HangingPoop");
 
         foreach (GameObject poop in groundPoops)
@@ -153,6 +152,8 @@ public class PlayerController : MonoBehaviour
     {
         hitCount++;
         GameManager.Instance.PlayerHit();
+        transform.localScale = originalScale;
+        isDucking = false;
 
         if (animator != null)
             animator.SetInteger("HitCount", hitCount);
@@ -160,4 +161,3 @@ public class PlayerController : MonoBehaviour
         Debug.Log("Hit count: " + hitCount);
     }
 }
-

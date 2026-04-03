@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: d4842edeffd8447a9b157bda516fe6a6
+guid: 044006182c83b477797bbf081011daa8
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2410671940745902572
-    second: Sky_0
+      213: -6224885648455465140
+    second: Sky 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,12 +113,12 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Sky_0
+      name: Sky 1_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 7681
+        width: 7634
         height: 4321
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ce9392a9b5d647120800000000000000
-      internalID: 2410671940745902572
+      spriteID: c47826ccb73cc99a0800000000000000
+      internalID: -6224885648455465140
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Sky_0: 2410671940745902572
+      Sky 1_0: -6224885648455465140
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

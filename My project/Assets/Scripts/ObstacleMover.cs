@@ -26,11 +26,11 @@ public class ObstacleMover : MonoBehaviour
         {
             float distanceX = Mathf.Abs(
                 transform.position.x - player.position.x);
-            if (distanceX < 1f)
+            if (distanceX < 3f)
                 isDroppingDown = true;
         }
 
-        // Drop down
+        // Drop down fast
         if (isDroppingDown)
             transform.Translate(Vector2.down * dropSpeed * Time.deltaTime);
 
@@ -39,4 +39,3 @@ public class ObstacleMover : MonoBehaviour
             Destroy(gameObject);
     }
 }
-
