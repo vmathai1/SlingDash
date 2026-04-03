@@ -18,10 +18,17 @@ public class GameManager : MonoBehaviour
     public Slider poopMeter;
     public GameObject gameOverPanel;
 
+    [Header("Audio")]
+    public AudioSource backgroundMusic;
+    public AudioClip gameOverClip;
+    public AudioClip hitClip;
+    public AudioClip scoreClip;
+
     private float currentSpeed;
     private int score;
     private int hitCount;
     private bool isGameOver;
+    private AudioSource audioSource;
 
     void Awake() => Instance = this;
 
@@ -32,6 +39,8 @@ public class GameManager : MonoBehaviour
         hitCount = 0;
         isGameOver = false;
 
+        audioSource = GetComponent<AudioSource>();
+
         if (gameOverPanel != null)
             gameOverPanel.SetActive(false);
 
@@ -40,6 +49,10 @@ public class GameManager : MonoBehaviour
             poopMeter.maxValue = maxHits;
             poopMeter.value = 0;
         }
+
+        // Start background music
+        if (backgroundMusic != null)
+            backgroundMusic.Play();
     }
 
     void Update()
@@ -58,6 +71,11 @@ public class GameManager : MonoBehaviour
     {
         score++;
         Debug.Log("Score: " + score);
+
+        // Play score sound
+        if (scoreClip != null)
+            AudioSource.PlayClipAtPoint(
+                scoreClip, transform.position, 0.5f);
     }
 
     public void PlayerHit()
@@ -67,6 +85,11 @@ public class GameManager : MonoBehaviour
 
         if (poopMeter != null)
             poopMeter.value = hitCount;
+
+        // Play hit sound
+        if (hitClip != null)
+            AudioSource.PlayClipAtPoint(
+                hitClip, transform.position, 0.7f);
 
         currentSpeed *= (1f - speedPenaltyPerHit);
 
@@ -78,6 +101,18 @@ public class GameManager : MonoBehaviour
     {
         isGameOver = true;
         Debug.Log("GAME OVER!");
+
+        // Stop background music
+        if (backgroundMusic != null)
+            backgroundMusic.Stop();
+
+        // Play game over music
+        if (audioSource != null && gameOverClip != null)
+        {
+            audioSource.clip = gameOverClip;
+            audioSource.loop = false;
+            audioSource.Play();
+        }
 
         if (gameOverPanel != null)
             gameOverPanel.SetActive(true);
@@ -95,4 +130,3 @@ public class GameManager : MonoBehaviour
 
     public bool IsGameOver() => isGameOver;
 }
-
