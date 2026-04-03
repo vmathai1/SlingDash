@@ -6,6 +6,7 @@ TagManager:
   tags:
   - GroundPoop
   - HangingPoop
+  - ScoreZone
   layers:
   - Default
   - TransparentFX
