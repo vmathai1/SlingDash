@@ -33,6 +33,12 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        // Don't do anything if game not started or paused
+        if (!GameManager.Instance.IsGameStarted()) return;
+        if (GameManager.Instance.IsGameOver()) return;
+        if (GameManager.Instance.IsPaused()) return;
+
+        // rest of Update code...
         if (GameManager.Instance.IsGameOver()) return;
 
         // Only detect actual ground layer
