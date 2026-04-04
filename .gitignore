@@ -18,6 +18,8 @@ sysinfo.txt
 *.apk
 *.unitypackage
 *.app
+iOSBuild/
+My project/iOSBuild/
 
 # Crashlytics
 crashlytics-build.properties

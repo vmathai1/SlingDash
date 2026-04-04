@@ -70,7 +70,6 @@ public class GameManager : MonoBehaviour
     public void AddScore()
     {
         score++;
-        Debug.Log("Score: " + score);
 
         // Play score sound
         if (scoreClip != null)
@@ -81,7 +80,6 @@ public class GameManager : MonoBehaviour
     public void PlayerHit()
     {
         hitCount++;
-        Debug.Log("Player hit! Count: " + hitCount);
 
         if (poopMeter != null)
             poopMeter.value = hitCount;
@@ -100,7 +98,6 @@ public class GameManager : MonoBehaviour
     void TriggerGameOver()
     {
         isGameOver = true;
-        Debug.Log("GAME OVER!");
 
         // Stop background music
         if (backgroundMusic != null)
@@ -122,7 +119,6 @@ public class GameManager : MonoBehaviour
 
     public void RestartGame()
     {
-        Debug.Log("Restarting game!");
         Time.timeScale = 1f;
         SceneManager.LoadScene(
             SceneManager.GetActiveScene().name);

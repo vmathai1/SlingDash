@@ -43,7 +43,6 @@ public class PlayerController : MonoBehaviour
         if (isGrounded && rb.linearVelocity.y <= 0.05f)
         {
             if (jumpCount > 0)
-                Debug.Log("Landing! Resetting jumps");
             jumpCount = 0;
         }
 
@@ -158,6 +157,5 @@ public class PlayerController : MonoBehaviour
         if (animator != null)
             animator.SetInteger("HitCount", hitCount);
 
-        Debug.Log("Hit count: " + hitCount);
     }
 }
