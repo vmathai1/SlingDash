@@ -19,9 +19,9 @@ public class ObstacleSpawner : MonoBehaviour
     public float maxSpeedMultiplier = 3f;
     public int scorePerDifficultyLevel = 5;
 
-    private float timer;
-    private float nextSpawn;
-    private int lastScore = 0;
+    float timer;
+    float nextSpawn;
+    int lastScore = 0;
 
     void Start() => ScheduleNextSpawn();
 
@@ -41,7 +41,7 @@ public class ObstacleSpawner : MonoBehaviour
 
     void ScheduleNextSpawn()
     {
-        int currentScore = GameManager.Instance.GetScore();
+        int currentScore = Mathf.FloorToInt(GameManager.Instance.GetScore());
 
         float difficultyLevel = currentScore / scorePerDifficultyLevel;
 
@@ -69,22 +69,19 @@ public class ObstacleSpawner : MonoBehaviour
     {
         bool spawnHanging = Random.value < hangingPoopChance;
 
-        if (spawnHanging)
+        if (spawnHanging && hangingPoopPrefab != null)
         {
             Vector3 pos = new Vector3(spawnX, hangingY, 0);
-            GameObject poop = Instantiate(
-                hangingPoopPrefab, pos, Quaternion.identity);
-            poop.tag = "HangingPoop";
-            poop.AddComponent<ObstacleMover>();
+            GameObject obs = Instantiate(hangingPoopPrefab, pos, Quaternion.identity);
+            obs.tag = "Obstacle";
+            obs.AddComponent<ObstacleMover>();
         }
-        else
+        else if (groundPoopPrefab != null)
         {
             Vector3 pos = new Vector3(spawnX, groundY, 0);
-            GameObject poop = Instantiate(
-                groundPoopPrefab, pos, Quaternion.identity);
-            poop.tag = "GroundPoop";
-            poop.AddComponent<ObstacleMover>();
+            GameObject obs = Instantiate(groundPoopPrefab, pos, Quaternion.identity);
+            obs.tag = "Obstacle";
+            obs.AddComponent<ObstacleMover>();
         }
     }
 }
-
