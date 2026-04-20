@@ -2,57 +2,32 @@ using UnityEngine;
 
 public class BGScroller : MonoBehaviour
 {
-    [System.Serializable]
-    public class ParallaxLayer
-    {
-        public Transform transform;
-        public Transform duplicate;
-        public float parallaxSpeed;
-        public float gapAdjustment = 0f;
-    }
+    float imageWidth;
 
-    public ParallaxLayer[] layers;
+    void Start()
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr == null)
+        {
+            Debug.LogError("BGScroller needs a SpriteRenderer on: " + gameObject.name);
+            enabled = false;
+            return;
+        }
+        imageWidth = sr.bounds.size.x;
+    }
 
     void Update()
     {
-        if (GameManager.Instance == null) return;
-        if (GameManager.Instance.IsGameOver()) return;
+        float speed = GameManager.Instance.GetCurrentSpeed();
+        transform.Translate(Vector2.left * speed * Time.deltaTime);
 
-        float gameSpeed = GameManager.Instance.GetCurrentSpeed();
-
-        foreach (var layer in layers)
+        if (transform.position.x <= -imageWidth)
         {
-            if (layer.transform == null) continue;
-
-            SpriteRenderer sr = 
-                layer.transform.GetComponent<SpriteRenderer>();
-            if (sr == null) continue;
-
-            float width = sr.bounds.size.x + layer.gapAdjustment;
-            float move = gameSpeed * layer.parallaxSpeed * Time.deltaTime;
-
-            layer.transform.Translate(Vector2.left * move);
-            if (layer.duplicate != null)
-                layer.duplicate.Translate(Vector2.left * move);
-
-            if (layer.transform.position.x <= -width)
-            {
-                if (layer.duplicate != null)
-                    layer.transform.position = new Vector3(
-                        layer.duplicate.position.x + width,
-                        layer.transform.position.y,
-                        layer.transform.position.z);
-            }
-
-            if (layer.duplicate != null &&
-                layer.duplicate.position.x <= -width)
-            {
-                layer.duplicate.position = new Vector3(
-                    layer.transform.position.x + width,
-                    layer.duplicate.position.y,
-                    layer.duplicate.position.z);
-            }
+            transform.position = new Vector3(
+                transform.position.x + imageWidth * 2f,
+                transform.position.y,
+                transform.position.z
+            );
         }
     }
 }
-

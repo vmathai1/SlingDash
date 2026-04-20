@@ -7,36 +7,41 @@ public class PlayerController : MonoBehaviour
     [SerializeField] int maxJumps = 2;
 
     [Header("Swipe Settings")]
-    [SerializeField] float swipeSlowdown = 0.015f;
-    [SerializeField] float minSpeed = 1.5f;
+    [SerializeField] float swipeThreshold = 30f;
+    [SerializeField] float swipeSlowdown = 2f;
 
     Rigidbody2D rb;
+    SpriteRenderer sr;
+    Camera cam;
     int jumpsLeft;
-    bool isDead;
+    float flashTimer = 0f;
+    bool isFlashing = false;
 
     // Swipe tracking
     Vector2 swipeStart;
-    bool trackingSwipe;
-
-    // Public so GameManager can read it
-    public bool IsDead => isDead;
+    bool swipeConsumed;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        sr = GetComponent<SpriteRenderer>();
+        cam = Camera.main;
         jumpsLeft = maxJumps;
     }
 
     void Update()
     {
-        if (isDead) return;
+        if (GameManager.Instance.IsGameOver()) return;
+
         HandleInput();
+        BounceInsideScreen();
         RotateTire();
+        HandleFlash();
     }
 
     void HandleInput()
     {
-        // Touch input (device)
+        // ── TOUCH ──
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
@@ -44,36 +49,51 @@ public class PlayerController : MonoBehaviour
             if (touch.phase == TouchPhase.Began)
             {
                 swipeStart = touch.position;
-                trackingSwipe = true;
+                swipeConsumed = false;
             }
 
-            if (touch.phase == TouchPhase.Moved && trackingSwipe)
+            if (touch.phase == TouchPhase.Ended && !swipeConsumed)
             {
-                float dx = touch.position.x - swipeStart.x;
-                if (dx < -30f) // swiping left
+                Vector2 swipeDelta = touch.position - swipeStart;
+                float absX = Mathf.Abs(swipeDelta.x);
+                float absY = Mathf.Abs(swipeDelta.y);
+
+                if (absX < swipeThreshold && absY < swipeThreshold)
                 {
-                    float pullAmount = Mathf.Abs(dx) / 300f;
-                    // Slows world speed via GameManager
-                    GameManager.Instance.SlowDown(pullAmount * swipeSlowdown);
-                }
-            }
-
-            if (touch.phase == TouchPhase.Ended)
-            {
-                float dx = touch.position.x - swipeStart.x;
-                float dy = Mathf.Abs(touch.position.y - swipeStart.y);
-                // Only jump if it wasn't a left swipe
-                if (dx > -30f && dy < 50f)
+                    // Tap — jump
                     TryJump();
-                trackingSwipe = false;
+                }
+                else if (absX > absY)
+                {
+                    if (swipeDelta.x > swipeThreshold)
+                    {
+                        // Swipe right — boost forward
+                        GameManager.Instance.BoostForward();
+                        swipeConsumed = true;
+                    }
+                    else if (swipeDelta.x < -swipeThreshold)
+                    {
+                        // Swipe left — slow down
+                        GameManager.Instance.SlowDown(swipeSlowdown);
+                        swipeConsumed = true;
+                    }
+                }
+                else if (swipeDelta.y > swipeThreshold)
+                {
+                    // Swipe up — jump
+                    TryJump();
+                    swipeConsumed = true;
+                }
             }
         }
 
-        // Keyboard fallback (editor testing)
+        // ── KEYBOARD (editor testing) ──
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow))
             TryJump();
+        if (Input.GetKeyDown(KeyCode.RightArrow))
+            GameManager.Instance.BoostForward();
         if (Input.GetKey(KeyCode.LeftArrow))
-            GameManager.Instance.SlowDown(swipeSlowdown);
+            GameManager.Instance.SlowDown(Time.deltaTime * swipeSlowdown);
     }
 
     void TryJump()
@@ -83,25 +103,80 @@ public class PlayerController : MonoBehaviour
         jumpsLeft--;
     }
 
+    void BounceInsideScreen()
+    {
+        float topY = cam.ViewportToWorldPoint(new Vector3(0, 1, 0)).y;
+        float bottomY = cam.ViewportToWorldPoint(new Vector3(0, 0, 0)).y;
+
+        float radius = GetComponent<CircleCollider2D>().radius
+                       * transform.localScale.y;
+        Vector3 pos = transform.position;
+        Vector2 vel = rb.linearVelocity;
+
+        if (pos.y + radius >= topY)
+        {
+            pos.y = topY - radius;
+            vel.y = -Mathf.Abs(vel.y) * 0.6f;
+        }
+
+        if (pos.y - radius <= bottomY)
+        {
+            pos.y = bottomY + radius;
+            vel.y = Mathf.Abs(vel.y) * 0.6f;
+        }
+
+        pos.x = Mathf.Clamp(pos.x,
+                cam.ViewportToWorldPoint(Vector3.zero).x + radius,
+                cam.ViewportToWorldPoint(Vector3.right).x - radius);
+        vel.x = 0f;
+
+        transform.position = pos;
+        rb.linearVelocity = vel;
+    }
+
     void RotateTire()
     {
-        // Rotate clockwise based on world scroll speed
         float worldSpeed = GameManager.Instance.WorldSpeed;
-        transform.Rotate(0f, 0f, -worldSpeed * 3f * Time.deltaTime * Mathf.Rad2Deg * 0.5f);
+        transform.Rotate(0f, 0f,
+            -worldSpeed * 3f * Time.deltaTime * Mathf.Rad2Deg * 0.5f);
+    }
+
+    void HandleFlash()
+    {
+        if (isFlashing)
+        {
+            flashTimer += Time.deltaTime;
+            sr.color = Mathf.Sin(flashTimer * 20f) > 0
+                ? Color.red : Color.white;
+            if (flashTimer > 1f)
+            {
+                isFlashing = false;
+                flashTimer = 0f;
+                sr.color = Color.white;
+            }
+        }
     }
 
     void OnCollisionEnter2D(Collision2D col)
     {
         if (col.gameObject.CompareTag("Ground"))
-        {
             jumpsLeft = maxJumps;
-        }
 
         if (col.gameObject.CompareTag("Obstacle"))
         {
-            isDead = true;
-            rb.linearVelocity = new Vector2(-3f, 6f); // knock back on hit
-            GameManager.Instance.TriggerGameOver();
+            // Slow world to a stop on hit
+            GameManager.Instance.SlowDown(GameManager.Instance.WorldSpeed);
+            isFlashing = true;
+            flashTimer = 0f;
+        }
+    }
+
+    void OnCollisionExit2D(Collision2D col)
+    {
+        if (col.gameObject.CompareTag("Obstacle"))
+        {
+            // Give a small boost when escaping obstacle
+            GameManager.Instance.BoostForward();
         }
     }
 }

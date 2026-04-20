@@ -6,8 +6,8 @@ public class ObstacleMover : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.Instance.IsGameOver()) return;
-
+        // Keep moving regardless of game over
+        // so obstacles don't freeze and trap the tire
         float speed = GameManager.Instance.GetCurrentSpeed();
         transform.Translate(Vector2.left * speed * Time.deltaTime);
 

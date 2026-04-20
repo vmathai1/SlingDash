@@ -10,8 +10,8 @@ public class ObstacleSpawner : MonoBehaviour
     public float minSpawnInterval = 1.5f;
     public float maxSpawnInterval = 3.5f;
     public float spawnX = 10f;
-    public float groundY = 0f;
-    public float hangingY = 4f;
+    public float groundY = -2.9f;
+    public float hangingY = -1.5f;
     public float hangingPoopChance = 0.3f;
 
     [Header("Difficulty Scaling")]
@@ -27,6 +27,7 @@ public class ObstacleSpawner : MonoBehaviour
 
     void Update()
     {
+        // Stop spawning new obstacles after game over
         if (GameManager.Instance.IsGameOver()) return;
 
         timer += Time.deltaTime;
