@@ -49,7 +49,9 @@ public class GameManager : MonoBehaviour
 
     public void SlowDown(float amount)
     {
-        worldSpeed = Mathf.Max(minSpeed, worldSpeed - amount);
+        worldSpeed = Mathf.Max(0f, worldSpeed - amount);
+        // Also pull base speed down so it doesn't immediately recover
+        baseSpeed = Mathf.Max(2f, baseSpeed - amount * 0.5f);
     }
 
     public void BoostForward()

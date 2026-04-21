@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class BGScroller : MonoBehaviour
 {
+    [SerializeField] float speedMultiplier = 1f;
+    [SerializeField] Transform otherCopy;
+
     float imageWidth;
 
     void Start()
@@ -18,16 +21,21 @@ public class BGScroller : MonoBehaviour
 
     void Update()
     {
-        float speed = GameManager.Instance.GetCurrentSpeed();
+        float speed = GameManager.Instance.GetCurrentSpeed() * speedMultiplier;
         transform.Translate(Vector2.left * speed * Time.deltaTime);
 
-        if (transform.position.x <= -imageWidth)
+        if (transform.position.x + imageWidth / 2f < -imageWidth / 2f)
         {
-            transform.position = new Vector3(
-                transform.position.x + imageWidth * 2f,
-                transform.position.y,
-                transform.position.z
-            );
+            if (otherCopy != null)
+                transform.position = new Vector3(
+                    otherCopy.position.x + imageWidth,
+                    transform.position.y,
+                    transform.position.z);
+            else
+                transform.position = new Vector3(
+                    transform.position.x + imageWidth * 2f,
+                    transform.position.y,
+                    transform.position.z);
         }
     }
 }

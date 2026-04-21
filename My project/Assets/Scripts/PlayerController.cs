@@ -13,11 +13,11 @@ public class PlayerController : MonoBehaviour
     Rigidbody2D rb;
     SpriteRenderer sr;
     Camera cam;
+    FireEffect fireEffect;
     int jumpsLeft;
     float flashTimer = 0f;
     bool isFlashing = false;
 
-    // Swipe tracking
     Vector2 swipeStart;
     bool swipeConsumed;
 
@@ -27,6 +27,15 @@ public class PlayerController : MonoBehaviour
         sr = GetComponent<SpriteRenderer>();
         cam = Camera.main;
         jumpsLeft = maxJumps;
+
+        fireEffect = GetComponentInChildren<FireEffect>(true);
+        if (fireEffect == null)
+            fireEffect = FindObjectOfType<FireEffect>();
+
+        if (fireEffect == null)
+            Debug.LogError("FireEffect NOT FOUND on Tire!");
+        else
+            Debug.Log("FireEffect found: " + fireEffect.gameObject.name);
     }
 
     void Update()
@@ -69,12 +78,13 @@ public class PlayerController : MonoBehaviour
                     {
                         // Swipe right — boost forward
                         GameManager.Instance.BoostForward();
+                        TriggerFireIfGrounded();
                         swipeConsumed = true;
                     }
                     else if (swipeDelta.x < -swipeThreshold)
                     {
                         // Swipe left — slow down
-                        GameManager.Instance.SlowDown(swipeSlowdown);
+                        GameManager.Instance.SlowDown(2f);
                         swipeConsumed = true;
                     }
                 }
@@ -91,16 +101,43 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow))
             TryJump();
         if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
             GameManager.Instance.BoostForward();
-        if (Input.GetKey(KeyCode.LeftArrow))
-            GameManager.Instance.SlowDown(Time.deltaTime * swipeSlowdown);
+            TriggerFireIfGrounded();
+        }
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
+            GameManager.Instance.SlowDown(2f);
     }
 
     void TryJump()
     {
         if (jumpsLeft <= 0) return;
+
+        float topY = cam.ViewportToWorldPoint(new Vector3(0, 1, 0)).y;
+        if (transform.position.y > topY * 0.4f) return;
+
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         jumpsLeft--;
+    }
+
+    void TriggerFireIfGrounded()
+    {
+        float radius = GetComponent<CircleCollider2D>().radius
+                       * transform.localScale.y;
+        Vector2 checkPos = new Vector2(
+            transform.position.x,
+            transform.position.y - radius - 0.1f);
+
+        Collider2D[] hits = Physics2D.OverlapCircleAll(checkPos, 0.2f);
+        foreach (Collider2D hit in hits)
+        {
+            if (hit.gameObject.CompareTag("Ground"))
+            {
+                if (fireEffect != null)
+                    fireEffect.TriggerFire();
+                return;
+            }
+        }
     }
 
     void BounceInsideScreen()
@@ -113,21 +150,22 @@ public class PlayerController : MonoBehaviour
         Vector3 pos = transform.position;
         Vector2 vel = rb.linearVelocity;
 
+        // Top bounce
         if (pos.y + radius >= topY)
         {
             pos.y = topY - radius;
             vel.y = -Mathf.Abs(vel.y) * 0.6f;
         }
 
+        // Bottom bounce
         if (pos.y - radius <= bottomY)
         {
             pos.y = bottomY + radius;
             vel.y = Mathf.Abs(vel.y) * 0.6f;
         }
 
-        pos.x = Mathf.Clamp(pos.x,
-                cam.ViewportToWorldPoint(Vector3.zero).x + radius,
-                cam.ViewportToWorldPoint(Vector3.right).x - radius);
+        // Lock tire to fixed X position
+        pos.x = -2f;
         vel.x = 0f;
 
         transform.position = pos;
@@ -164,7 +202,6 @@ public class PlayerController : MonoBehaviour
 
         if (col.gameObject.CompareTag("Obstacle"))
         {
-            // Slow world to a stop on hit
             GameManager.Instance.SlowDown(GameManager.Instance.WorldSpeed);
             isFlashing = true;
             flashTimer = 0f;
@@ -174,9 +211,17 @@ public class PlayerController : MonoBehaviour
     void OnCollisionExit2D(Collision2D col)
     {
         if (col.gameObject.CompareTag("Obstacle"))
-        {
-            // Give a small boost when escaping obstacle
             GameManager.Instance.BoostForward();
+    }
+
+    void OnTriggerEnter2D(Collider2D col)
+    {
+        // Bounce off top foreground
+        if (col.gameObject.CompareTag("ForegroundTop"))
+        {
+            rb.linearVelocity = new Vector2(
+                rb.linearVelocity.x,
+                -Mathf.Abs(rb.linearVelocity.y) * 0.6f);
         }
     }
 }
