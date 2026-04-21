@@ -10,6 +10,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float swipeThreshold = 30f;
     [SerializeField] float swipeSlowdown = 2f;
 
+    [Header("Effects")]
+    public ExplosionEffect explosionEffect;
+
     Rigidbody2D rb;
     SpriteRenderer sr;
     Camera cam;
@@ -36,6 +39,9 @@ public class PlayerController : MonoBehaviour
             Debug.LogError("FireEffect NOT FOUND on Tire!");
         else
             Debug.Log("FireEffect found: " + fireEffect.gameObject.name);
+
+        if (explosionEffect == null)
+            Debug.LogError("ExplosionEffect NOT assigned in Inspector!");
     }
 
     void Update()
@@ -69,35 +75,31 @@ public class PlayerController : MonoBehaviour
 
                 if (absX < swipeThreshold && absY < swipeThreshold)
                 {
-                    // Tap — jump
                     TryJump();
                 }
                 else if (absX > absY)
                 {
                     if (swipeDelta.x > swipeThreshold)
                     {
-                        // Swipe right — boost forward
                         GameManager.Instance.BoostForward();
                         TriggerFireIfGrounded();
                         swipeConsumed = true;
                     }
                     else if (swipeDelta.x < -swipeThreshold)
                     {
-                        // Swipe left — slow down
                         GameManager.Instance.SlowDown(2f);
                         swipeConsumed = true;
                     }
                 }
                 else if (swipeDelta.y > swipeThreshold)
                 {
-                    // Swipe up — jump
                     TryJump();
                     swipeConsumed = true;
                 }
             }
         }
 
-        // ── KEYBOARD (editor testing) ──
+        // ── KEYBOARD ──
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow))
             TryJump();
         if (Input.GetKeyDown(KeyCode.RightArrow))
@@ -154,14 +156,14 @@ public class PlayerController : MonoBehaviour
         if (pos.y + radius >= topY)
         {
             pos.y = topY - radius;
-            vel.y = -Mathf.Abs(vel.y) * 0.6f;
+            vel.y = -Mathf.Abs(vel.y) * 0.8f;
         }
 
         // Bottom bounce
         if (pos.y - radius <= bottomY)
         {
             pos.y = bottomY + radius;
-            vel.y = Mathf.Abs(vel.y) * 0.6f;
+            vel.y = Mathf.Abs(vel.y) * 0.8f;
         }
 
         // Lock tire to fixed X position
@@ -195,6 +197,34 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void TriggerExplosion()
+    {
+        if (GameManager.Instance.IsGameOver()) return;
+
+        Debug.Log("TriggerExplosion called!");
+
+        // Hide tire
+        sr.enabled = false;
+
+        // Stop tire physics
+        rb.linearVelocity = Vector2.zero;
+        rb.gravityScale = 0f;
+
+        // Play explosion animation
+        if (explosionEffect != null)
+        {
+            Debug.Log("Playing explosion!");
+            explosionEffect.Play();
+        }
+        else
+        {
+            Debug.LogError("explosionEffect is null!");
+        }
+
+        // Trigger game over with delay
+        GameManager.Instance.TriggerExplosionGameOver();
+    }
+
     void OnCollisionEnter2D(Collision2D col)
     {
         if (col.gameObject.CompareTag("Ground"))
@@ -206,6 +236,9 @@ public class PlayerController : MonoBehaviour
             isFlashing = true;
             flashTimer = 0f;
         }
+
+        if (col.gameObject.CompareTag("DeadlyObstacle"))
+            TriggerExplosion();
     }
 
     void OnCollisionExit2D(Collision2D col)
@@ -223,5 +256,24 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity.x,
                 -Mathf.Abs(rb.linearVelocity.y) * 0.6f);
         }
+
+        // Spring — launch tire upward at 2x jump force
+        if (col.gameObject.CompareTag("Spring"))
+        {
+            rb.linearVelocity = new Vector2(
+                rb.linearVelocity.x,
+                jumpForce * 2f);
+            jumpsLeft = maxJumps;
+            GameManager.Instance.BoostForward();
+
+            SpringEffect spring = col.GetComponent<SpringEffect>();
+            if (spring != null) spring.Compress();
+
+            Debug.Log("Spring hit! Launching!");
+        }
+
+        // Deadly obstacle trigger
+        if (col.gameObject.CompareTag("DeadlyObstacle"))
+            TriggerExplosion();
     }
 }

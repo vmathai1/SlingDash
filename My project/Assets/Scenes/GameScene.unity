@@ -1223,8 +1223,8 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!61 &941186567
-BoxCollider2D:
+--- !u!60 &941186567
+PolygonCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1253,7 +1253,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -1267,8 +1267,22 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 15.6, y: 1.15}
-  m_EdgeRadius: 0
+  m_Points:
+    m_Paths:
+    - - {x: 2.37, y: 0.085}
+      - {x: 2.46, y: -0.015}
+      - {x: 2.77, y: -0.255}
+      - {x: 6.42, y: -0.315}
+      - {x: 6.7, y: -0.575}
+      - {x: 7.7999997, y: -0.575}
+      - {x: 7.7999997, y: 0.575}
+      - {x: -7.7999997, y: 0.575}
+      - {x: -7.7999997, y: -0.575}
+      - {x: -6.39, y: -0.575}
+      - {x: -2.78, y: -0.24499999}
+      - {x: -2.6299999, y: -0.13499999}
+      - {x: -2.3999999, y: 0.044999998}
+  m_UseDelaunayMesh: 1
 --- !u!1 &1245340799
 GameObject:
   m_ObjectHideFlags: 0
@@ -1471,7 +1485,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
   m_LocalPosition: {x: -0.8, y: 0, z: 0}
-  m_LocalScale: {x: 3, y: 3, z: 3}
+  m_LocalScale: {x: 4, y: 4, z: 4}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1245340801}
@@ -1584,13 +1598,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleSpawner
   groundPoopPrefab: {fileID: 4565972408265113818, guid: a331ce05d8e5c4baca96524853aad1d6, type: 3}
   hangingPoopPrefab: {fileID: 7262967526357256597, guid: 00867a89f739d479eb27e4bffffd29f7, type: 3}
+  springPrefab: {fileID: 4062655433249287453, guid: 1d7c45c9f9216405b867228e769e450d, type: 3}
   minSpawnInterval: 1.5
-  maxSpawnInterval: 3.5
+  maxSpawnInterval: 6.5
   spawnX: 10
   groundY: -3.1
-  hangingY: -3.1
+  hangingY: -3.5
   hangingPoopChance: 0.3
-  minPossibleInterval: 0.8
+  springChance: 0.2
+  minPossibleInterval: 1.2
   maxSpeedMultiplier: 3
   scorePerDifficultyLevel: 5
 --- !u!4 &1378685698

@@ -49,8 +49,7 @@ public class GameManager : MonoBehaviour
 
     public void SlowDown(float amount)
     {
-        worldSpeed = Mathf.Max(0f, worldSpeed - amount);
-        // Also pull base speed down so it doesn't immediately recover
+        worldSpeed = Mathf.Max(minSpeed, worldSpeed - amount);
         baseSpeed = Mathf.Max(2f, baseSpeed - amount * 0.5f);
     }
 
@@ -61,6 +60,7 @@ public class GameManager : MonoBehaviour
 
     public void TriggerGameOver()
     {
+        if (isGameOver) return;
         isGameOver = true;
 
         if (finalScoreText != null)
@@ -72,6 +72,34 @@ public class GameManager : MonoBehaviour
         int best = PlayerPrefs.GetInt("BestScore", 0);
         if (Mathf.FloorToInt(score) > best)
             PlayerPrefs.SetInt("BestScore", Mathf.FloorToInt(score));
+    }
+
+    public void TriggerExplosionGameOver()
+    {
+        if (isGameOver) return;
+        isGameOver = true;
+
+        // Stop world immediately
+        worldSpeed = 0f;
+        baseSpeed = 0f;
+
+        int best = PlayerPrefs.GetInt("BestScore", 0);
+        if (Mathf.FloorToInt(score) > best)
+            PlayerPrefs.SetInt("BestScore", Mathf.FloorToInt(score));
+
+        // Delay showing UI so explosion plays first
+        StartCoroutine(ShowGameOverAfterDelay(1.2f));
+    }
+
+    System.Collections.IEnumerator ShowGameOverAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (finalScoreText != null)
+            finalScoreText.text = "Score: " + Mathf.FloorToInt(score);
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true);
     }
 
     public void RestartGame()

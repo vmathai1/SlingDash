@@ -5,17 +5,19 @@ public class ObstacleSpawner : MonoBehaviour
     [Header("Obstacle Prefabs")]
     public GameObject groundPoopPrefab;
     public GameObject hangingPoopPrefab;
+    public GameObject springPrefab;
 
     [Header("Spawn Settings")]
     public float minSpawnInterval = 1.5f;
     public float maxSpawnInterval = 3.5f;
     public float spawnX = 10f;
-    public float groundY = -2.9f;
-    public float hangingY = -1.5f;
+    public float groundY = -3.1f;
+    public float hangingY = -3.5f;
     public float hangingPoopChance = 0.3f;
+    public float springChance = 0.2f;
 
     [Header("Difficulty Scaling")]
-    public float minPossibleInterval = 0.4f;
+    public float minPossibleInterval = 0.8f;
     public float maxSpeedMultiplier = 3f;
     public int scorePerDifficultyLevel = 5;
 
@@ -27,7 +29,6 @@ public class ObstacleSpawner : MonoBehaviour
 
     void Update()
     {
-        // Stop spawning new obstacles after game over
         if (GameManager.Instance.IsGameOver()) return;
 
         timer += Time.deltaTime;
@@ -43,7 +44,6 @@ public class ObstacleSpawner : MonoBehaviour
     void ScheduleNextSpawn()
     {
         int currentScore = Mathf.FloorToInt(GameManager.Instance.GetScore());
-
         float difficultyLevel = currentScore / scorePerDifficultyLevel;
 
         float intervalReduction = difficultyLevel * 0.15f;
@@ -53,9 +53,7 @@ public class ObstacleSpawner : MonoBehaviour
                            maxSpawnInterval - intervalReduction);
 
         nextSpawn = Random.Range(currentMin, currentMax);
-
-        hangingPoopChance = Mathf.Min(0.6f,
-                            0.3f + (difficultyLevel * 0.05f));
+        hangingPoopChance = Mathf.Min(0.6f, 0.3f + (difficultyLevel * 0.05f));
 
         if (currentScore != lastScore)
         {
@@ -68,15 +66,25 @@ public class ObstacleSpawner : MonoBehaviour
 
     void SpawnObstacle()
     {
-        bool spawnHanging = Random.value < hangingPoopChance;
+        float roll = Random.value;
 
-        if (spawnHanging && hangingPoopPrefab != null)
+        // Spring spawns on ground
+        if (roll < springChance && springPrefab != null)
+        {
+            Vector3 pos = new Vector3(spawnX, groundY, 0);
+            GameObject spring = Instantiate(springPrefab, pos, Quaternion.identity);
+            spring.tag = "Spring";
+            spring.AddComponent<ObstacleMover>();
+        }
+        // Deadly hanging obstacle
+        else if (roll < springChance + hangingPoopChance && hangingPoopPrefab != null)
         {
             Vector3 pos = new Vector3(spawnX, hangingY, 0);
             GameObject obs = Instantiate(hangingPoopPrefab, pos, Quaternion.identity);
-            obs.tag = "Obstacle";
+            obs.tag = "DeadlyObstacle";
             obs.AddComponent<ObstacleMover>();
         }
+        // Ground obstacle
         else if (groundPoopPrefab != null)
         {
             Vector3 pos = new Vector3(spawnX, groundY, 0);
