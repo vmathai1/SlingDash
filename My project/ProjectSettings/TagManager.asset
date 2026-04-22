@@ -12,6 +12,8 @@ TagManager:
   - ForegroundTop
   - Spring
   - DeadlyObstacle
+  - Collectible
+  - Tire
   layers:
   - Default
   - TransparentFX
