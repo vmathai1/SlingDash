@@ -38,12 +38,12 @@ public class GameManager : MonoBehaviour
     {
         Instance = this;
 
+        if (liveScoreText != null)
+            liveScoreText.text = "Score: 0";
         if (starsText != null)
             starsText.text = "STARS : 0";
         if (diamondsText != null)
             diamondsText.text = "DIAMONDS : 0";
-        if (liveScoreText != null)
-            liveScoreText.text = "0";
     }
 
     void Update()
@@ -53,14 +53,14 @@ public class GameManager : MonoBehaviour
         // Gradually recover speed back to base
         if (worldSpeed < baseSpeed)
             worldSpeed = Mathf.Min(baseSpeed,
-                        worldSpeed + Time.deltaTime * 1.5f);
+                         worldSpeed + Time.deltaTime * 1.5f);
 
         // Gradually increase base speed over time
         baseSpeed = Mathf.Min(maxSpeed,
                     baseSpeed + Time.deltaTime * 0.02f);
 
         if (liveScoreText != null)
-            liveScoreText.text = Mathf.FloorToInt(score).ToString();
+            liveScoreText.text = "Score: " + Mathf.FloorToInt(score).ToString();
     }
 
     public float WorldSpeed => worldSpeed;
@@ -85,7 +85,7 @@ public class GameManager : MonoBehaviour
         obstacleScore += points;
 
         if (liveScoreText != null)
-            liveScoreText.text = Mathf.FloorToInt(score).ToString();
+            liveScoreText.text = "Score: " + Mathf.FloorToInt(score).ToString();
     }
 
     public void AddCollectible(CollectibleItem.CollectibleType type, int points)
@@ -113,7 +113,7 @@ public class GameManager : MonoBehaviour
         }
 
         if (liveScoreText != null)
-            liveScoreText.text = Mathf.FloorToInt(score).ToString();
+            liveScoreText.text = "Score: " + Mathf.FloorToInt(score).ToString();
 
         Debug.Log($"Collected {type} +{points} pts! " +
                   $"Stars: {sessionStars} Diamonds: {sessionDiamonds}");
@@ -135,10 +135,6 @@ public class GameManager : MonoBehaviour
             best = finalScore;
             PlayerPrefs.SetInt("BestScore", best);
         }
-
-        // Save all time totals
-        int allTimeStars = PlayerPrefs.GetInt("TotalStars", 0);
-        int allTimeDiamonds = PlayerPrefs.GetInt("TotalDiamonds", 0);
 
         // Update game over UI
         if (finalScoreText != null)
