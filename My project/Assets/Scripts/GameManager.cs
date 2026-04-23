@@ -19,6 +19,13 @@ public class GameManager : MonoBehaviour
     public TMP_Text finalStarsText;
     public TMP_Text finalDiamondsText;
 
+    [Header("Start Menu")]
+    public GameObject startPanel;
+    public GameObject instructionsPanel;
+    public TMP_Text menuBestScoreText;
+    public TMP_Text menuTotalStarsText;
+    public TMP_Text menuTotalDiamondsText;
+
     [Header("Speed Settings")]
     public float baseSpeed = 4f;
     public float maxSpeed = 10f;
@@ -28,6 +35,7 @@ public class GameManager : MonoBehaviour
     float worldSpeed = 4f;
     float score = 0f;
     bool isGameOver = false;
+    bool gameStarted = false;
 
     int sessionStars = 0;
     int sessionDiamonds = 0;
@@ -38,17 +46,47 @@ public class GameManager : MonoBehaviour
     {
         Instance = this;
 
+        // Pause until play is pressed
+        Time.timeScale = 0f;
+
+        // Initialize live UI
         if (liveScoreText != null)
             liveScoreText.text = "Score: 0";
         if (starsText != null)
             starsText.text = "STARS : 0";
         if (diamondsText != null)
             diamondsText.text = "DIAMONDS : 0";
+
+        // Show start panel
+        if (startPanel != null)
+            startPanel.SetActive(true);
+        if (instructionsPanel != null)
+            instructionsPanel.SetActive(false);
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(false);
+
+        // Load saved stats for menu
+        LoadMenuStats();
+    }
+
+    void LoadMenuStats()
+    {
+        int best = PlayerPrefs.GetInt("BestScore", 0);
+        int stars = PlayerPrefs.GetInt("TotalStars", 0);
+        int diamonds = PlayerPrefs.GetInt("TotalDiamonds", 0);
+
+        if (menuBestScoreText != null)
+            menuBestScoreText.text = "Best Score: " + best;
+        if (menuTotalStarsText != null)
+            menuTotalStarsText.text = "STARS : " + stars;
+        if (menuTotalDiamondsText != null)
+            menuTotalDiamondsText.text = "DIAMONDS : " + diamonds;
     }
 
     void Update()
     {
         if (isGameOver) return;
+        if (!gameStarted) return;
 
         // Gradually recover speed back to base
         if (worldSpeed < baseSpeed)
@@ -62,6 +100,45 @@ public class GameManager : MonoBehaviour
         if (liveScoreText != null)
             liveScoreText.text = "Score: " + Mathf.FloorToInt(score).ToString();
     }
+
+    // ── Start Menu Methods ──
+
+    public void StartGame()
+    {
+        gameStarted = true;
+        Time.timeScale = 1f;
+
+        if (startPanel != null)
+            startPanel.SetActive(false);
+        if (instructionsPanel != null)
+            instructionsPanel.SetActive(false);
+    }
+
+    public void ShowInstructions()
+    {
+        Debug.Log("ShowInstructions called!");
+
+        if (instructionsPanel != null)
+        {
+            Debug.Log("InstructionsPanel found, activating!");
+            instructionsPanel.SetActive(true);
+        }
+        else
+            Debug.LogError("InstructionsPanel is NULL!");
+
+        if (startPanel != null)
+            startPanel.SetActive(false);
+    }
+
+    public void HideInstructions()
+    {
+        if (instructionsPanel != null)
+            instructionsPanel.SetActive(false);
+        if (startPanel != null)
+            startPanel.SetActive(true);
+    }
+
+    // ── Game Methods ──
 
     public float WorldSpeed => worldSpeed;
     public float GetCurrentSpeed() => worldSpeed;
@@ -184,6 +261,7 @@ public class GameManager : MonoBehaviour
 
     public void RestartGame()
     {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
