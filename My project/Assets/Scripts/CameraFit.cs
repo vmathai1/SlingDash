@@ -2,22 +2,37 @@ using UnityEngine;
 
 public class CameraFit : MonoBehaviour
 {
+    [SerializeField] bool fitWidth = true;
+    [SerializeField] bool fitHeight = true;
+
     void Start()
     {
-        // Auto fit camera to screen
-        float screenRatio = (float)Screen.width / Screen.height;
-        float targetRatio = 16f / 9f;
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr == null) return;
 
-        Camera cam = GetComponent<Camera>();
+        float worldHeight = Camera.main.orthographicSize * 2f;
+        float worldWidth = worldHeight * Camera.main.aspect;
 
-        if (screenRatio >= targetRatio)
-        {
-            cam.orthographicSize = 5f;
-        }
-        else
-        {
-            float differenceInSize = targetRatio / screenRatio;
-            cam.orthographicSize = 5f * differenceInSize;
-        }
+        float spriteHeight = sr.sprite.bounds.size.y * transform.localScale.y;
+        float spriteWidth = sr.sprite.bounds.size.x * transform.localScale.x;
+
+        float scaleX = transform.localScale.x;
+        float scaleY = transform.localScale.y;
+
+        if (fitHeight)
+            scaleY = worldHeight / (sr.sprite.bounds.size.y);
+
+        if (fitWidth)
+            scaleX = worldWidth / (sr.sprite.bounds.size.x);
+
+        // Use larger scale to ensure full coverage — no gaps
+        float finalScale = Mathf.Max(scaleX, scaleY);
+
+        transform.localScale = new Vector3(
+            finalScale,
+            finalScale,
+            transform.localScale.z);
+
+        Debug.Log(gameObject.name + " fitted scale: " + finalScale);
     }
 }

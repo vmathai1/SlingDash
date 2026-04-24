@@ -32,10 +32,15 @@ public class GameManager : MonoBehaviour
     public float boostAmount = 3f;
     public float minSpeed = 0f;
 
+    [Header("Boost Settings")]
+    public float maxBoostSpeed = 15f;
+    public float boostRampTime = 2f;
+
     float worldSpeed = 4f;
     float score = 0f;
     bool isGameOver = false;
     bool gameStarted = false;
+    bool isHoldBoosting = false;
 
     int sessionStars = 0;
     int sessionDiamonds = 0;
@@ -45,11 +50,8 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-
-        // Pause until play is pressed
         Time.timeScale = 0f;
 
-        // Initialize live UI
         if (liveScoreText != null)
             liveScoreText.text = "Score: 0";
         if (starsText != null)
@@ -57,7 +59,6 @@ public class GameManager : MonoBehaviour
         if (diamondsText != null)
             diamondsText.text = "DIAMONDS : 0";
 
-        // Show start panel
         if (startPanel != null)
             startPanel.SetActive(true);
         if (instructionsPanel != null)
@@ -65,7 +66,6 @@ public class GameManager : MonoBehaviour
         if (gameOverPanel != null)
             gameOverPanel.SetActive(false);
 
-        // Load saved stats for menu
         LoadMenuStats();
     }
 
@@ -88,7 +88,12 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
         if (!gameStarted) return;
 
-        // Gradually recover speed back to base
+        // Recover speed back to base when not boosting
+        if (!isHoldBoosting && worldSpeed > baseSpeed)
+            worldSpeed = Mathf.MoveTowards(worldSpeed, baseSpeed,
+                         Time.deltaTime * 3f);
+
+        // Recover speed up to base when too slow
         if (worldSpeed < baseSpeed)
             worldSpeed = Mathf.Min(baseSpeed,
                          worldSpeed + Time.deltaTime * 1.5f);
@@ -97,8 +102,25 @@ public class GameManager : MonoBehaviour
         baseSpeed = Mathf.Min(maxSpeed,
                     baseSpeed + Time.deltaTime * 0.02f);
 
+        // Reset boost flag each frame
+        isHoldBoosting = false;
+
         if (liveScoreText != null)
             liveScoreText.text = "Score: " + Mathf.FloorToInt(score).ToString();
+    }
+
+    // ── Boost Methods ──
+
+    public void ApplyHoldBoost(float holdTime)
+    {
+        isHoldBoosting = true;
+
+        float t = Mathf.Clamp01(holdTime / boostRampTime);
+        float exponentialT = t * t;
+
+        float targetSpeed = Mathf.Lerp(baseSpeed, maxBoostSpeed, exponentialT);
+        worldSpeed = Mathf.MoveTowards(worldSpeed, targetSpeed,
+                     Time.deltaTime * maxBoostSpeed);
     }
 
     // ── Start Menu Methods ──
@@ -112,20 +134,16 @@ public class GameManager : MonoBehaviour
             startPanel.SetActive(false);
         if (instructionsPanel != null)
             instructionsPanel.SetActive(false);
+
+        // Start background music
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayMusic();
     }
 
     public void ShowInstructions()
     {
-        Debug.Log("ShowInstructions called!");
-
         if (instructionsPanel != null)
-        {
-            Debug.Log("InstructionsPanel found, activating!");
             instructionsPanel.SetActive(true);
-        }
-        else
-            Debug.LogError("InstructionsPanel is NULL!");
-
         if (startPanel != null)
             startPanel.SetActive(false);
     }
@@ -178,6 +196,9 @@ public class GameManager : MonoBehaviour
 
             if (starsText != null)
                 starsText.text = "STARS : " + sessionStars;
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayStar();
         }
         else if (type == CollectibleItem.CollectibleType.Diamond)
         {
@@ -187,6 +208,9 @@ public class GameManager : MonoBehaviour
 
             if (diamondsText != null)
                 diamondsText.text = "DIAMONDS : " + sessionDiamonds;
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayDiamond();
         }
 
         if (liveScoreText != null)
@@ -205,7 +229,6 @@ public class GameManager : MonoBehaviour
     {
         int finalScore = Mathf.FloorToInt(score);
 
-        // Save best score
         int best = PlayerPrefs.GetInt("BestScore", 0);
         if (finalScore > best)
         {
@@ -213,22 +236,16 @@ public class GameManager : MonoBehaviour
             PlayerPrefs.SetInt("BestScore", best);
         }
 
-        // Update game over UI
         if (finalScoreText != null)
             finalScoreText.text = "Score: " + finalScore;
-
         if (finalTotalScoreText != null)
             finalTotalScoreText.text = "Total: " + finalScore;
-
         if (bestScoreText != null)
             bestScoreText.text = "Best: " + best;
-
         if (finalStarsText != null)
             finalStarsText.text = "STARS : " + sessionStars;
-
         if (finalDiamondsText != null)
             finalDiamondsText.text = "DIAMONDS : " + sessionDiamonds;
-
         if (gameOverPanel != null)
             gameOverPanel.SetActive(true);
     }
@@ -237,6 +254,10 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         isGameOver = true;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.StopMusic();
+
         SaveAndShowGameOver();
     }
 
@@ -245,11 +266,12 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
         isGameOver = true;
 
-        // Stop world immediately
         worldSpeed = 0f;
         baseSpeed = 0f;
 
-        // Delay showing UI so explosion plays first
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.StopMusic();
+
         StartCoroutine(ShowGameOverAfterDelay(1.2f));
     }
 

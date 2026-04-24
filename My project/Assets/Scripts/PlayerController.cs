@@ -23,6 +23,12 @@ public class PlayerController : MonoBehaviour
 
     Vector2 swipeStart;
     bool swipeConsumed;
+    bool isBoosting = false;
+    float boostHoldTime = 0f;
+
+    bool isBouncing = false;
+    float bounceTimer = 0f;
+    float maxBounceTime = 2f;
 
     void Start()
     {
@@ -49,66 +55,127 @@ public class PlayerController : MonoBehaviour
         if (GameManager.Instance.IsGameOver()) return;
 
         HandleInput();
+        HandleBoostButton();
         BounceInsideScreen();
         RotateTire();
         HandleFlash();
+        HandleBounceTimeout();
+
+        if (isBoosting)
+        {
+            boostHoldTime += Time.deltaTime;
+            GameManager.Instance.ApplyHoldBoost(boostHoldTime);
+            TriggerFireIfGrounded();
+        }
+    }
+
+    void HandleBoostButton()
+    {
+        if (BoostButton.IsPressed)
+        {
+            isBoosting = true;
+            boostHoldTime = BoostButton.HoldTime;
+            GameManager.Instance.ApplyHoldBoost(boostHoldTime);
+            TriggerFireIfGrounded();
+        }
+        else if (!Input.GetKey(KeyCode.RightArrow) && isBoosting)
+        {
+            bool touchBoosting = false;
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                if (Input.GetTouch(i).phase == TouchPhase.Moved ||
+                    Input.GetTouch(i).phase == TouchPhase.Stationary)
+                {
+                    touchBoosting = true;
+                    break;
+                }
+            }
+            if (!touchBoosting && !BoostButton.IsPressed)
+            {
+                isBoosting = false;
+                boostHoldTime = 0f;
+            }
+        }
     }
 
     void HandleInput()
     {
-        // ── TOUCH ──
-        if (Input.touchCount > 0)
+        // ── KEYBOARD ──
+        if (Input.GetKey(KeyCode.RightArrow))
+            isBoosting = true;
+
+        if (Input.GetKeyUp(KeyCode.RightArrow))
         {
-            Touch touch = Input.GetTouch(0);
+            isBoosting = false;
+            boostHoldTime = 0f;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space) ||
+            Input.GetKeyDown(KeyCode.UpArrow))
+            TryJump();
+
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
+            GameManager.Instance.SlowDown(2f);
+
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+            StopBounce();
+
+        // ── TOUCH ──
+        for (int i = 0; i < Input.touchCount; i++)
+        {
+            Touch touch = Input.GetTouch(i);
 
             if (touch.phase == TouchPhase.Began)
             {
+                if (isBoosting)
+                {
+                    TryJump();
+                    continue;
+                }
+
                 swipeStart = touch.position;
                 swipeConsumed = false;
             }
 
-            if (touch.phase == TouchPhase.Ended && !swipeConsumed)
+            if (touch.phase == TouchPhase.Moved && !swipeConsumed)
             {
                 Vector2 swipeDelta = touch.position - swipeStart;
                 float absX = Mathf.Abs(swipeDelta.x);
                 float absY = Mathf.Abs(swipeDelta.y);
 
-                if (absX < swipeThreshold && absY < swipeThreshold)
+                if (swipeDelta.x < -swipeThreshold && absY < 80f)
                 {
-                    TryJump();
+                    GameManager.Instance.SlowDown(2f);
+                    swipeConsumed = true;
                 }
-                else if (absX > absY)
+                else if (swipeDelta.y < -swipeThreshold && absX < 80f)
                 {
-                    if (swipeDelta.x > swipeThreshold)
-                    {
-                        GameManager.Instance.BoostForward();
-                        TriggerFireIfGrounded();
-                        swipeConsumed = true;
-                    }
-                    else if (swipeDelta.x < -swipeThreshold)
-                    {
-                        GameManager.Instance.SlowDown(2f);
-                        swipeConsumed = true;
-                    }
-                }
-                else if (swipeDelta.y > swipeThreshold)
-                {
-                    TryJump();
+                    StopBounce();
                     swipeConsumed = true;
                 }
             }
+
+            if (touch.phase == TouchPhase.Ended)
+            {
+                Vector2 swipeDelta = touch.position - swipeStart;
+                float absX = Mathf.Abs(swipeDelta.x);
+                float absY = Mathf.Abs(swipeDelta.y);
+
+                if (absX < swipeThreshold && absY < swipeThreshold && !swipeConsumed)
+                    TryJump();
+                else if (swipeDelta.y > swipeThreshold && absX < absY && !swipeConsumed)
+                    TryJump();
+
+                swipeConsumed = false;
+            }
         }
 
-        // ── KEYBOARD ──
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow))
-            TryJump();
-        if (Input.GetKeyDown(KeyCode.RightArrow))
+        if (Input.touchCount == 0 && !Input.GetKey(KeyCode.RightArrow)
+            && !BoostButton.IsPressed)
         {
-            GameManager.Instance.BoostForward();
-            TriggerFireIfGrounded();
+            isBoosting = false;
+            boostHoldTime = 0f;
         }
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-            GameManager.Instance.SlowDown(2f);
     }
 
     void TryJump()
@@ -120,6 +187,32 @@ public class PlayerController : MonoBehaviour
 
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         jumpsLeft--;
+        isBouncing = true;
+        bounceTimer = 0f;
+    }
+
+    void StopBounce()
+    {
+        if (isBouncing)
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
+            rb.gravityScale = 3f;
+            isBouncing = false;
+            bounceTimer = 0f;
+        }
+    }
+
+    void HandleBounceTimeout()
+    {
+        if (isBouncing)
+        {
+            bounceTimer += Time.deltaTime;
+            if (bounceTimer >= maxBounceTime)
+            {
+                isBouncing = false;
+                bounceTimer = 0f;
+            }
+        }
     }
 
     void TriggerFireIfGrounded()
@@ -157,6 +250,9 @@ public class PlayerController : MonoBehaviour
         {
             pos.y = topY - radius;
             vel.y = -Mathf.Abs(vel.y) * 0.8f;
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayBounce();
         }
 
         // Bottom bounce
@@ -164,9 +260,9 @@ public class PlayerController : MonoBehaviour
         {
             pos.y = bottomY + radius;
             vel.y = Mathf.Abs(vel.y) * 0.8f;
+            rb.gravityScale = 2f;
         }
 
-        // Lock tire to fixed X position
         pos.x = -2f;
         vel.x = 0f;
 
@@ -203,38 +299,48 @@ public class PlayerController : MonoBehaviour
 
         Debug.Log("TriggerExplosion called!");
 
-        // Hide tire
         sr.enabled = false;
-
-        // Stop tire physics
         rb.linearVelocity = Vector2.zero;
         rb.gravityScale = 0f;
 
-        // Play explosion animation
+        // Play kill sound
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayKill();
+
         if (explosionEffect != null)
         {
             Debug.Log("Playing explosion!");
             explosionEffect.Play();
         }
         else
-        {
             Debug.LogError("explosionEffect is null!");
-        }
 
-        // Trigger game over with delay
         GameManager.Instance.TriggerExplosionGameOver();
     }
 
     void OnCollisionEnter2D(Collision2D col)
     {
         if (col.gameObject.CompareTag("Ground"))
+        {
             jumpsLeft = maxJumps;
+            isBouncing = false;
+            bounceTimer = 0f;
+            rb.gravityScale = 2f;
+
+            // Play bounce sound on ground landing
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayBounce();
+        }
 
         if (col.gameObject.CompareTag("Obstacle"))
         {
             GameManager.Instance.SlowDown(GameManager.Instance.WorldSpeed);
             isFlashing = true;
             flashTimer = 0f;
+
+            // Play hit sound
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayHit();
         }
 
         if (col.gameObject.CompareTag("DeadlyObstacle"))
@@ -249,22 +355,28 @@ public class PlayerController : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D col)
     {
-        // Bounce off top foreground
         if (col.gameObject.CompareTag("ForegroundTop"))
         {
             rb.linearVelocity = new Vector2(
                 rb.linearVelocity.x,
                 -Mathf.Abs(rb.linearVelocity.y) * 0.6f);
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayBounce();
         }
 
-        // Spring — launch tire upward at 2x jump force
         if (col.gameObject.CompareTag("Spring"))
         {
             rb.linearVelocity = new Vector2(
                 rb.linearVelocity.x,
                 jumpForce * 2f);
             jumpsLeft = maxJumps;
+            isBouncing = true;
+            bounceTimer = 0f;
             GameManager.Instance.BoostForward();
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayBounce();
 
             SpringEffect spring = col.GetComponent<SpringEffect>();
             if (spring != null) spring.Compress();
@@ -272,7 +384,6 @@ public class PlayerController : MonoBehaviour
             Debug.Log("Spring hit! Launching!");
         }
 
-        // Deadly obstacle trigger
         if (col.gameObject.CompareTag("DeadlyObstacle"))
             TriggerExplosion();
     }

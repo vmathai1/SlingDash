@@ -4,8 +4,10 @@ public class BGScroller : MonoBehaviour
 {
     [SerializeField] float speedMultiplier = 1f;
     [SerializeField] Transform otherCopy;
+    [SerializeField] float overlapAmount = 0.1f; // overlap to prevent gaps
 
     float imageWidth;
+    bool initialized = false;
 
     void Start()
     {
@@ -17,6 +19,7 @@ public class BGScroller : MonoBehaviour
             return;
         }
         imageWidth = sr.bounds.size.x;
+        Debug.Log(gameObject.name + " width = " + imageWidth);
     }
 
     void Update()
@@ -28,12 +31,12 @@ public class BGScroller : MonoBehaviour
         {
             if (otherCopy != null)
                 transform.position = new Vector3(
-                    otherCopy.position.x + imageWidth,
+                    otherCopy.position.x + imageWidth - overlapAmount,
                     transform.position.y,
                     transform.position.z);
             else
                 transform.position = new Vector3(
-                    transform.position.x + imageWidth * 2f,
+                    transform.position.x + imageWidth * 2f - overlapAmount,
                     transform.position.y,
                     transform.position.z);
         }
