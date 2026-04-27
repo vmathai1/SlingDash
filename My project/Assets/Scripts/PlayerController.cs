@@ -30,12 +30,15 @@ public class PlayerController : MonoBehaviour
     float bounceTimer = 0f;
     float maxBounceTime = 2f;
 
+    Canvas mainCanvas;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
         cam = Camera.main;
         jumpsLeft = maxJumps;
+        mainCanvas = FindObjectOfType<Canvas>();
 
         fireEffect = GetComponentInChildren<FireEffect>(true);
         if (fireEffect == null)
@@ -125,14 +128,11 @@ public class PlayerController : MonoBehaviour
         {
             Touch touch = Input.GetTouch(i);
 
+            // Skip touches on boost button area only
+            if (IsTouchOnBoostButton(touch.position)) continue;
+
             if (touch.phase == TouchPhase.Began)
             {
-                if (isBoosting)
-                {
-                    TryJump();
-                    continue;
-                }
-
                 swipeStart = touch.position;
                 swipeConsumed = false;
             }
@@ -170,12 +170,37 @@ public class PlayerController : MonoBehaviour
             }
         }
 
+        // No touches and no keyboard — stop boost
         if (Input.touchCount == 0 && !Input.GetKey(KeyCode.RightArrow)
             && !BoostButton.IsPressed)
         {
             isBoosting = false;
             boostHoldTime = 0f;
         }
+    }
+
+    bool IsTouchOnBoostButton(Vector2 screenPos)
+    {
+        // Only block touches physically on the button area
+        float screenW = Screen.width;
+        float screenH = Screen.height;
+
+        float scaleFactor = mainCanvas != null ? mainCanvas.scaleFactor : 1f;
+
+        float buttonW = 250f * scaleFactor;
+        float buttonH = 230f * scaleFactor;
+        float buttonCenterX = screenW - (200f * scaleFactor);
+        float buttonCenterY = 200f * scaleFactor;
+
+        float left = buttonCenterX - buttonW / 2f;
+        float right = buttonCenterX + buttonW / 2f;
+        float bottom = buttonCenterY - buttonH / 2f;
+        float top = buttonCenterY + buttonH / 2f;
+
+        return screenPos.x > left &&
+               screenPos.x < right &&
+               screenPos.y > bottom &&
+               screenPos.y < top;
     }
 
     void TryJump()
@@ -303,7 +328,6 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         rb.gravityScale = 0f;
 
-        // Play kill sound
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlayKill();
 
@@ -327,7 +351,6 @@ public class PlayerController : MonoBehaviour
             bounceTimer = 0f;
             rb.gravityScale = 2f;
 
-            // Play bounce sound on ground landing
             if (AudioManager.Instance != null)
                 AudioManager.Instance.PlayBounce();
         }
@@ -338,7 +361,6 @@ public class PlayerController : MonoBehaviour
             isFlashing = true;
             flashTimer = 0f;
 
-            // Play hit sound
             if (AudioManager.Instance != null)
                 AudioManager.Instance.PlayHit();
         }

@@ -20,6 +20,7 @@ public class ObstacleSpawner : MonoBehaviour
     public float springChance = 0.2f;
     public float hangingTopChance = 0.1f;
     public float fallingTopChance = 0.1f;
+    public float tallObstacleYOffset = -0.3f;
 
     [Header("Difficulty Scaling")]
     public float minPossibleInterval = 1.2f;
@@ -70,68 +71,72 @@ public class ObstacleSpawner : MonoBehaviour
     }
 
     void SpawnObstacle()
+{
+    float roll = Random.value;
+
+    if (roll < springChance && springPrefab != null)
     {
-        float roll = Random.value;
-
-        Debug.Log($"Spawning roll: {roll:F2}");
-
-        // Spring on ground
-        if (roll < springChance && springPrefab != null)
-        {
-            Debug.Log("Spawning Spring");
-            Vector3 pos = new Vector3(spawnX, groundY, 0);
-            GameObject spring = Instantiate(
-                springPrefab, pos, Quaternion.identity);
-            spring.tag = "Spring";
-            spring.AddComponent<ObstacleMover>();
-        }
-        // Hanging top — stays
-        else if (roll < springChance + hangingTopChance
-                 && hangingTopPrefab != null)
-        {
-            Debug.Log("Spawning HangingTop");
-            Vector3 pos = new Vector3(spawnX, hangingTopY, 0);
-            GameObject obs = Instantiate(
-                hangingTopPrefab, pos, Quaternion.identity);
-            obs.tag = "DeadlyObstacle";
-            obs.AddComponent<ObstacleMover>();
-        }
-        // Falling top
-        else if (roll < springChance + hangingTopChance + fallingTopChance
-                 && fallingTopPrefab != null)
-        {
-            Debug.Log("Spawning FallingTop");
-            // Spawn closer so player has time to react
-            Vector3 pos = new Vector3(spawnX * 0.6f, hangingTopY, 0);
-            GameObject obs = Instantiate(
-                fallingTopPrefab, pos, Quaternion.identity);
-            obs.tag = "DeadlyObstacle";
-            // No ObstacleMover — FallingObstacle handles its own movement
-        }
-        // Deadly hanging from middle
-        else if (roll < springChance + hangingTopChance + fallingTopChance
-                 + hangingPoopChance && hangingPoopPrefab != null)
-        {
-            Debug.Log("Spawning HangingPoop");
-            Vector3 pos = new Vector3(spawnX, hangingY, 0);
-            GameObject obs = Instantiate(
-                hangingPoopPrefab, pos, Quaternion.identity);
-            obs.tag = "DeadlyObstacle";
-            obs.AddComponent<ObstacleMover>();
-        }
-        // Ground obstacle — most common
-        else if (groundPoopPrefab != null)
-        {
-            Debug.Log("Spawning Ground obstacle");
-            Vector3 pos = new Vector3(spawnX, groundY, 0);
-            GameObject obs = Instantiate(
-                groundPoopPrefab, pos, Quaternion.identity);
-            obs.tag = "Obstacle";
-            obs.AddComponent<ObstacleMover>();
-        }
-        else
-        {
-            Debug.LogWarning("Nothing spawned! Check prefab assignments!");
-        }
+        Vector3 pos = new Vector3(spawnX, GetGroundY(springPrefab), 0);
+        GameObject spring = Instantiate(springPrefab, pos, Quaternion.identity);
+        spring.tag = "Spring";
+        spring.AddComponent<ObstacleMover>();
     }
+    else if (roll < springChance + hangingTopChance && hangingTopPrefab != null)
+    {
+        Vector3 pos = new Vector3(spawnX, GetTopY(hangingTopPrefab), 0);
+        GameObject obs = Instantiate(hangingTopPrefab, pos, Quaternion.identity);
+        obs.tag = "DeadlyObstacle";
+        obs.AddComponent<ObstacleMover>();
+    }
+    else if (roll < springChance + hangingTopChance + fallingTopChance
+             && fallingTopPrefab != null)
+    {
+        Vector3 pos = new Vector3(spawnX * 0.6f, GetTopY(fallingTopPrefab), 0);
+        GameObject obs = Instantiate(fallingTopPrefab, pos, Quaternion.identity);
+        obs.tag = "DeadlyObstacle";
+    }
+else if (roll < springChance + hangingTopChance + fallingTopChance
+         + hangingPoopChance && hangingPoopPrefab != null)
+{
+    float y = GetGroundY(hangingPoopPrefab) + tallObstacleYOffset;
+    Vector3 pos = new Vector3(spawnX, y, 0);
+    GameObject obs = Instantiate(hangingPoopPrefab, pos, Quaternion.identity);
+    obs.tag = "DeadlyObstacle";
+    obs.AddComponent<ObstacleMover>();
+}
+    else if (groundPoopPrefab != null)
+    {
+        Vector3 pos = new Vector3(spawnX, GetGroundY(groundPoopPrefab), 0);
+        GameObject obs = Instantiate(groundPoopPrefab, pos, Quaternion.identity);
+        obs.tag = "Obstacle";
+        obs.AddComponent<ObstacleMover>();
+    }
+}
+
+// Calculates exact Y so obstacle bottom sits on ground surface
+float GetGroundY(GameObject prefab)
+{
+    // Get the sprite's natural height
+    SpriteRenderer sr = prefab.GetComponent<SpriteRenderer>();
+    if (sr == null || sr.sprite == null) return groundY;
+
+    // Natural sprite height × object scale Y
+    float spriteH = sr.sprite.bounds.size.y;
+    Vector3 scale = prefab.transform.localScale;
+    float worldHeight = spriteH * scale.y;
+    float halfHeight = worldHeight * 0.5f;
+
+    return groundY + halfHeight;
+}
+// Calculates exact Y so obstacle top touches ForegroundTop
+float GetTopY(GameObject prefab)
+{
+    SpriteRenderer sr = prefab.GetComponent<SpriteRenderer>();
+    if (sr == null) return hangingTopY;
+
+    float halfHeight = sr.bounds.size.y * prefab.transform.localScale.y * 0.5f;
+
+    // hangingTopY is the top foreground Y — subtract half height
+    return hangingTopY - halfHeight;
+}
 }
