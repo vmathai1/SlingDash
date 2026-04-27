@@ -56,6 +56,8 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (GameManager.Instance.IsGameOver()) return;
+        if (GameManager.Instance.IsGameOver()) return;
+        if (GameManager.Instance.IsPaused()) return;
 
         HandleInput();
         HandleBoostButton();

@@ -26,6 +26,10 @@ public class GameManager : MonoBehaviour
     public TMP_Text menuTotalStarsText;
     public TMP_Text menuTotalDiamondsText;
 
+    [Header("Pause UI")]
+    public GameObject pauseButton;
+    public GameObject pausePanel;
+
     [Header("Speed Settings")]
     public float baseSpeed = 4f;
     public float maxSpeed = 10f;
@@ -35,12 +39,14 @@ public class GameManager : MonoBehaviour
     [Header("Boost Settings")]
     public float maxBoostSpeed = 15f;
     public float boostRampTime = 2f;
+    public bool IsGameStarted() => gameStarted;
 
     float worldSpeed = 4f;
     float score = 0f;
     bool isGameOver = false;
     bool gameStarted = false;
     bool isHoldBoosting = false;
+    bool isPaused = false;
 
     int sessionStars = 0;
     int sessionDiamonds = 0;
@@ -66,6 +72,11 @@ public class GameManager : MonoBehaviour
         if (gameOverPanel != null)
             gameOverPanel.SetActive(false);
 
+        if (pauseButton != null)
+            pauseButton.SetActive(false);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
         LoadMenuStats();
     }
 
@@ -87,22 +98,19 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         if (!gameStarted) return;
+        if (isPaused) return;
 
-        // Recover speed back to base when not boosting
         if (!isHoldBoosting && worldSpeed > baseSpeed)
             worldSpeed = Mathf.MoveTowards(worldSpeed, baseSpeed,
                          Time.deltaTime * 3f);
 
-        // Recover speed up to base when too slow
         if (worldSpeed < baseSpeed)
             worldSpeed = Mathf.Min(baseSpeed,
                          worldSpeed + Time.deltaTime * 1.5f);
 
-        // Gradually increase base speed over time
         baseSpeed = Mathf.Min(maxSpeed,
                     baseSpeed + Time.deltaTime * 0.02f);
 
-        // Reset boost flag each frame
         isHoldBoosting = false;
 
         if (liveScoreText != null)
@@ -123,19 +131,88 @@ public class GameManager : MonoBehaviour
                      Time.deltaTime * maxBoostSpeed);
     }
 
+    // ── Pause Methods ──
+
+    public bool IsPaused() => isPaused;
+
+    public void PauseGame()
+    {
+        if (isGameOver || !gameStarted) return;
+        isPaused = true;
+        Time.timeScale = 0f;
+
+        if (pauseButton != null)
+            pauseButton.SetActive(false);
+        if (pausePanel != null)
+            pausePanel.SetActive(true);
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.StopMusic();
+    }
+
+    public void ResumeGame()
+    {
+        isPaused = false;
+        Time.timeScale = 1f;
+
+        if (pauseButton != null)
+            pauseButton.SetActive(true);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayMusic();
+    }
+
+    public void EndGame()
+    {
+        isPaused = false;
+        Time.timeScale = 1f;
+
+        if (pauseButton != null)
+            pauseButton.SetActive(false);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.StopMusic();
+
+        // Reload scene — Awake shows start panel automatically
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
     // ── Start Menu Methods ──
 
     public void StartGame()
     {
         gameStarted = true;
         Time.timeScale = 1f;
+        isGameOver = false;
 
         if (startPanel != null)
             startPanel.SetActive(false);
         if (instructionsPanel != null)
             instructionsPanel.SetActive(false);
 
-        // Start background music
+        if (liveScoreText != null)
+        {
+            liveScoreText.gameObject.SetActive(true);
+            liveScoreText.text = "Score: 0";
+        }
+        if (starsText != null)
+        {
+            starsText.gameObject.SetActive(true);
+            starsText.text = "STARS : 0";
+        }
+        if (diamondsText != null)
+        {
+            diamondsText.gameObject.SetActive(true);
+            diamondsText.text = "DIAMONDS : 0";
+        }
+
+        if (pauseButton != null)
+            pauseButton.SetActive(true);
+
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlayMusic();
     }
@@ -227,6 +304,11 @@ public class GameManager : MonoBehaviour
 
     void SaveAndShowGameOver()
     {
+        if (pauseButton != null)
+            pauseButton.SetActive(false);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
         int finalScore = Mathf.FloorToInt(score);
 
         int best = PlayerPrefs.GetInt("BestScore", 0);
